@@ -1,5 +1,7 @@
 # unslopped
 
+<img src="https://skills.sh/b/fxledev/unslopped" alt="Skills" height="28">
+
 One skill that has to be loaded before anything a human reads, including
 everything that lands in git, plus a checker that fails the run when a draft
 still smells generated.
