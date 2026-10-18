@@ -33,24 +33,30 @@ list with the same name.
 
 ## layout
 
+The skill lives under `skills/unslopped/`, which is the layout the registry
+indexes.
+
 ```
-SKILL.md                the gate, the invention rule, the prose rules, routing
-references/banned.md    vocabulary and what to write instead
-references/patterns.md  the prose tells with before/after, per area
-references/git.md       commits, READMEs, repo descriptions, PRs, releases, branches, issues
-scripts/slop.mjs        the checker
-scripts/score.mjs       grades an eval directory against assertions
-tests/fixtures/         bad drafts the checker has to fail, and one that passes
-evals/evals.json        the prompts, including the ones that should not trigger
+skills/unslopped/
+├── SKILL.md                the gate, the invention rule, the prose rules, routing
+├── references/banned.md    vocabulary and what to write instead
+├── references/patterns.md  the prose tells with before/after, per area
+├── references/git.md       commits, READMEs, repo descriptions, PRs, releases, branches, issues
+├── scripts/slop.mjs        the checker
+├── scripts/score.mjs       grades an eval directory against assertions
+├── tests/fixtures/         bad drafts the checker has to fail, and one that passes
+└── evals/evals.json        the prompts, including the ones that should not trigger
 ```
 
 ## usage
 
+From the repo root:
+
 ```
-node scripts/slop.mjs README.md
-node scripts/slop.mjs --stdin < draft.txt
-node scripts/slop.mjs --strict README.md
-node scripts/score.mjs <workspace-dir>
+node skills/unslopped/scripts/slop.mjs README.md
+node skills/unslopped/scripts/slop.mjs --stdin < draft.txt
+node skills/unslopped/scripts/slop.mjs --strict README.md
+node skills/unslopped/scripts/score.mjs <workspace-dir>
 ```
 
 From the installed copy the path is `~/.agents/skills/unslopped/scripts/slop.mjs`.
