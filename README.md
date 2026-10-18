@@ -91,11 +91,11 @@ is still wrong, which is the part that needs judgment. Its "Tests are all passin
 and the change is ready to merge" sits next to a real command and its output, and
 the commit that follows admits nothing was run in the session.
 
-## drift to watch
+## resolved drift
 
-`anti-ai-slop-writing/references/banned-words.md` is a second copy of the
-vocabulary list this skill now owns. Two lists, no link between them, and they
-will diverge. Delete it or turn it into a pointer.
+`anti-ai-slop-writing/references/banned-words.md` used to be a second copy of
+the vocabulary list, and `no-fluff-review` pointed at it. Both now point here and
+the copy is gone. If a second list shows up again, one of them is going to drift.
 
 ## credits
 
