@@ -24,10 +24,12 @@ Works on opencode, Claude Code, Cursor, Codex and the rest of the agents the CLI
 knows about. It installs to `~/.agents/skills/unslopped`, and opencode loads
 that path on startup along with `AGENTS.md`. Restart after installing.
 
-`npx skills update` does not track a repo install, so refresh by running the add
-command again. Prefer the repo by hand? Copy the folder to
-`~/.config/opencode/skills/unslopped`. One copy only: two installs of the same
-skill both show up in the agent's skill list with the same name.
+`npx skills update` reports this skill as not installed, because the install
+does not land in `skills-lock.json`. Refresh by running the add command again.
+
+Prefer the repo by hand? Copy the folder to `~/.config/opencode/skills/unslopped`.
+One copy only: two installs of the same skill both show up in the agent's skill
+list with the same name.
 
 ## layout
 
