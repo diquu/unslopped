@@ -1,5 +1,5 @@
 ---
-name: stop-ai-slop
+name: unslopped
 description: Mandatory before any output a human reads or ships. Use when writing or editing prose, code, comments, commits, READMEs, PRs, release notes, branch names, issue titles, repo descriptions, UI strings, prompts, logs, or chat replies. Catches the AI defaults (seamless, robust, delve, "not X but Y", forced triads, em dashes, summary closers, bold label lists, Co-Authored-By trailers, "all tests pass" with no command) in English and Spanish, stops invention about your own project, and verifies the result with a mechanical checker. Load it even when the diff looks trivial, because that is exactly when the default output is worst.
 license: MIT
 ---

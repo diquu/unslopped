@@ -1,4 +1,4 @@
-# stop-ai-slop
+# unslopped
 
 One skill that has to be loaded before anything a human reads, including
 everything that lands in git, plus a checker that fails the run when a draft
@@ -12,7 +12,7 @@ been reviewed by hand when it had never been run.
 
 ## install
 
-Copy this folder to `~/.config/opencode/skills/stop-ai-slop` and restart
+Copy this folder to `~/.config/opencode/skills/unslopped` and restart
 opencode. Skills and `AGENTS.md` load at startup.
 
 ## layout
