@@ -4,7 +4,7 @@ description: Mandatory before any output a human reads or ships. Use when writin
 license: MIT
 ---
 
-# Stop AI-SLOP
+# UnSlopped
 
 Model prose drifts toward the token the average reader expects, and it invents
 facts about your project to fill a sentence. The output reads like a template,
