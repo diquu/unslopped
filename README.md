@@ -6,7 +6,7 @@ still smells generated.
 
 The rules were already here, scattered across six skills. Two things were
 wrong. Nothing enforced them, so a banned list in a second file went unread and
-a prohibition like "never say seamless" left nothing to write instead. And the
+a prohibition like "never say that word" left nothing to write instead. And the
 failures that mattered were not style: a PR body claiming a service worker had
 been reviewed by hand when it had never been run.
 
@@ -69,7 +69,8 @@ files, which is how you lint this repo and the other skills in your config.
 Em dashes and `--`, banned words and phrases in English and Spanish, chatbot
 openers, staged openers, chat residue, knowledge-limit admissions, "not X but Y"
 in both languages, section banners in code, emoji, bold labels on list items,
-unexplained ALL CAPS, `Co-Authored-By` trailers naming a model, and "all tests
+unexplained acronyms in caps, `Co-Authored-By` trailers naming a model, and
+"all tests
 pass" with no command in sight.
 
 ## what it does not catch, and the four rounds that proved it
