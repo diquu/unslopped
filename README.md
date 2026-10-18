@@ -1,5 +1,7 @@
 # unslopped
 
+[![skills.sh](https://skills.sh/b/fxledev/unslopped)](https://skills.sh/fxledev/unslopped)
+
 One skill that has to be loaded before anything a human reads, including
 everything that lands in git, plus a checker that fails the run when a draft
 still smells generated.
@@ -12,8 +14,17 @@ been reviewed by hand when it had never been run.
 
 ## install
 
-Copy this folder to `~/.config/opencode/skills/unslopped` and restart
-opencode. Skills and `AGENTS.md` load at startup.
+```
+npx skills add fxledev/unslopped
+```
+
+Works on opencode, Claude Code, Cursor, Codex and the rest of the agents the CLI
+knows about. It installs to `~/.agents/skills/unslopped`, and opencode loads
+that path on startup along with `AGENTS.md`. Restart after installing.
+
+Prefer the repo by hand? Copy the folder to `~/.config/opencode/skills/unslopped`.
+One copy only: two installs of the same skill both show up in the agent's skill
+list with the same name.
 
 ## layout
 
@@ -36,6 +47,8 @@ node scripts/slop.mjs --stdin < draft.txt
 node scripts/slop.mjs --strict README.md
 node scripts/score.mjs <workspace-dir>
 ```
+
+From the installed copy the path is `~/.agents/skills/unslopped/scripts/slop.mjs`.
 
 `--strict` forces the vocabulary rules onto files that are themselves rule
 files, which is how you lint this repo and the other skills in your config.
