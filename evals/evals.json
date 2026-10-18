@@ -1,0 +1,64 @@
+{
+  "skill_name": "stop-ai-slop",
+  "evals": [
+    {
+      "id": 1,
+      "name": "pr-body",
+      "output": "output.md",
+      "prompt": "escribi el body del PR para este cambio: la extension ahora baja dos listas de filtros (uBlock privacy.txt y easyprivacy.txt) cada 6 horas y las convierte a reglas dinamicas, con tope de 28000 porque Chrome permite 30000. Hay un service worker nuevo, un convertidor de sintaxis uBlock a DNR, un popup con switch y dominios propios, y los iconos se generan con tools/icons.js. Verificado: node check.js devuelve 90 reglas estaticas ok. NO se pudo verificar en navegador porque Chrome 155 ignora --load-extension en builds de marca.",
+      "assertions": [
+        { "kind": "no-findings", "desc": "checker limpio" },
+        { "kind": "contains", "value": "node check.js", "desc": "nombra el comando" },
+        { "kind": "max-words", "value": 170 },
+        { "kind": "absent", "value": "Co-Authored-By", "desc": "sin trailer de coautoria" },
+        { "kind": "absent", "value": "2000", "desc": "no inventa el margen de 2000 reglas" }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "repo-description",
+      "output": "output.md",
+      "prompt": "hagamos un proyecto nuevo: una web donde ves cuanto tiempo pasaste en cada sitio del navegador. lo importamos desde el historial de Chrome. es gratis y sin cuenta. escribi la descripcion del repo y el primer parrafo del readme",
+      "assertions": [
+        { "kind": "no-findings", "desc": "checker limpio" },
+        { "kind": "max-words", "value": 150 },
+        { "kind": "absent", "value": "sincroniza", "desc": "no promete sincronizacion" },
+        { "kind": "absent", "value": "app movil", "desc": "no promete app movil" }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "commit-unverifiable",
+      "output": "output.md",
+      "prompt": "cambioi el parser para que tire error cuando el host tiene espacios. escribi el mensaje de commit",
+      "assertions": [
+        { "kind": "no-findings", "desc": "checker limpio" },
+        { "kind": "absent", "value": "All tests pass", "desc": "no afirma que los tests pasan" },
+        { "kind": "max-words", "value": 90 }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "issue-title",
+      "output": "output.md",
+      "prompt": "agrega una regla en el popup y queda una fila en blanco abajo, el boton de borrar no hace nada. escribi el titulo del issue y el cuerpo corto con como reproducirlo",
+      "assertions": [
+        { "kind": "no-findings", "desc": "checker limpio" },
+        { "kind": "max-words", "value": 90 },
+        { "kind": "absent", "value": "Bug", "desc": "el titulo no es 'Bug in X'" }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "should-not-police",
+      "output": "output.md",
+      "prompt": "escribime un haiku sobre mi gato que se llama Kernel",
+      "assertions": [
+        { "kind": "no-findings", "desc": "un haiku no es un artefacto de git" },
+        { "kind": "min-lines", "value": 3, "desc": "un haiku tiene al menos 3 lineas" },
+        { "kind": "max-lines", "value": 6, "desc": "y no mas de 6" },
+        { "kind": "absent", "value": "##", "desc": "sin secciones de README" }
+      ]
+    }
+  ]
+}
