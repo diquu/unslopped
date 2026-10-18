@@ -15,16 +15,21 @@ been reviewed by hand when it had never been run.
 ## install
 
 ```
-npx skills add fxledev/unslopped
+npx skills add fxledev/unslopped -g
 ```
+
+The `-g` matters. Without it the CLI picks the scope from your current
+directory, so running it inside a repo drops the skill in `.agents/skills/` of
+that repo and writes a `skills-lock.json` next to it.
 
 Works on opencode, Claude Code, Cursor, Codex and the rest of the agents the CLI
 knows about. It installs to `~/.agents/skills/unslopped`, and opencode loads
 that path on startup along with `AGENTS.md`. Restart after installing.
 
-Prefer the repo by hand? Copy the folder to `~/.config/opencode/skills/unslopped`.
-One copy only: two installs of the same skill both show up in the agent's skill
-list with the same name.
+`npx skills update` does not track a repo install, so refresh by running the add
+command again. Prefer the repo by hand? Copy the folder to
+`~/.config/opencode/skills/unslopped`. One copy only: two installs of the same
+skill both show up in the agent's skill list with the same name.
 
 ## layout
 
