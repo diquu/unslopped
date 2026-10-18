@@ -1,11 +1,4 @@
 #!/usr/bin/env node
-// Grades an eval directory against the assertions in evals.json.
-//
-//   node scripts/score.mjs <workspace-dir>
-//
-// The workspace holds <eval-name>/{with_skill,without_skill}/<file>.
-// Prints one row per eval and config, plus a diff between them.
-
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';

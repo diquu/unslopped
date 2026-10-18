@@ -1,12 +1,4 @@
 #!/usr/bin/env node
-// Mechanical AI-slop check. Rules a model can forget get enforced here instead.
-//
-//   node slop.mjs <file...>
-//   node slop.mjs --stdin < draft.txt
-//   node slop.mjs --strict <file>
-//
-// Exit 1 if anything error-level was found.
-
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join, relative, resolve, sep } from 'node:path';
