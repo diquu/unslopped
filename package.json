@@ -1,0 +1,21 @@
+{
+  "name": "unslopped",
+  "version": "1.0.0",
+  "description": "One gate for any output a human reads.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node skills/unslopped/tests/run.mjs",
+    "lint": "node skills/unslopped/scripts/slop.mjs README.md skills/unslopped/SKILL.md skills/unslopped/references",
+    "banned": "node skills/unslopped/scripts/gen-banned.mjs",
+    "banned:check": "node skills/unslopped/scripts/gen-banned.mjs --check",
+    "score": "node skills/unslopped/scripts/score.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "skills/unslopped"
+  ]
+}

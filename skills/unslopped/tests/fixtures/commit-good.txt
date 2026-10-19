@@ -1,0 +1,4 @@
+stop retrying on 4xx instead of 5xx
+
+the api answered 422 for a malformed token and the loop kept going for
+40s before giving up. not worth a retry

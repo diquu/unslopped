@@ -1,0 +1,13 @@
+Update Webhook Handler
+
+This pull request adds a comprehensive retry strategy and improves the failure
+mode handling of the queue.
+
+- src/webhook/retry.ts
+- src/webhook/backoff.ts
+
+No breaking changes. All tests pass.
+
+This also fixes #412.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
