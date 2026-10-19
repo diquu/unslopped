@@ -25,8 +25,9 @@ before the channel skill.
    node scripts/slop.mjs --stdin < draft.txt
    ```
 
-   Exit 1 means something needs fixing. Fix it and run it again. `--strict`
-   forces the vocabulary rules on files that are themselves rule files.
+   Exit 1 means something needs fixing. Fix it and run it again. Exit 2 means
+   the check never ran, so nothing was verified. `--strict` forces the
+   vocabulary rules on files that are themselves rule files.
 3. For anything longer than a screen, do the by-hand pass with
    `references/patterns.md`.
 4. Deliver. Mention the check only when it failed and you need a decision from
@@ -128,12 +129,17 @@ Banned vocabulary applies everywhere.
 
 ## Files
 
-- `references/banned.md`: vocabulary and replacements.
+- `references/banned.md`: vocabulary and replacements. Generated from the table, do
+  not edit it by hand.
 - `references/patterns.md`: the prose tells with before/after, split by area.
 - `references/git.md`: every surface that lands in git or GitHub.
-- `scripts/slop.mjs`: the checker.
+- `scripts/vocab.mjs`: the vocabulary table, the single source of truth.
+- `scripts/slop.mjs`: the checker. `--commit` reads a commit message.
+- `scripts/gen-banned.mjs`: writes `references/banned.md` from the table.
 - `scripts/score.mjs`: grades an eval directory into a table.
-- `tests/fixtures/`: bad drafts the checker has to fail, plus the one that
-  passes on purpose because it needs judgment.
+- `scripts/hook.mjs`: the pre-commit gate.
+- `tests/run.mjs`: the suite that keeps every rule alive.
+- `tests/fixtures/`: bad drafts the checker has to fail, plus the ones that
+  pass on purpose because they need judgment.
 - `evals/evals.json`: the prompts, including the ones where the right answer is
   to leave the text alone.

@@ -162,3 +162,25 @@ unless the repo uses them everywhere, no ticket number unless asked.
 3. Read the subject alone. It should say what changed without the body.
 4. `.gitignore` before the first commit. Never commit `.env`, keys, tokens,
    build output, or whatever the tooling dropped in the folder.
+
+## What the checker already looks at
+
+Some of the rules above are mechanical now, so you do not have to hold them in
+your head. `node scripts/slop.mjs --commit <file>` reads a commit message and
+complains about:
+
+- a subject that starts in uppercase, unless it carries a conventional prefix
+- a subject over 72 characters
+- a subject that only says "fix a bug", "update", "changes" or "wip"
+- a subject that needs the word "and", which is two commits
+- a body that lists the changed files
+- "no breaking changes" when nothing is breaking
+- an issue closed in the body and not named in the subject
+- a co-author trailer, a claim that the suite is green with no command, and
+  the vocabulary rules above
+
+`git config core.hooksPath .githooks` makes the same checks run on every
+commit of a repo.
+
+The rest of this file is still judgment. Nothing mechanical knows whether a PR
+body tells the truth about what was verified.
