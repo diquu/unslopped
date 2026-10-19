@@ -1,0 +1,3 @@
+#!/bin/sh
+# Puerta de commit. Activa con: git config core.hooksPath .githooks
+exec node "$(git rev-parse --show-toplevel)/skills/unslopped/scripts/hook.mjs"
