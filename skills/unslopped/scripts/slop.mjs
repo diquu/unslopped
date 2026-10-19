@@ -1,95 +1,110 @@
 #!/usr/bin/env node
-import { readFileSync, existsSync } from 'node:fs';
+// El checker. Lee un fichero o un directorio y falla la corrida cuando algo
+// en el texto sigue oliendo a generado.
+//
+// Las reglas de vocabulario salen de `vocab.mjs`, que es la fuente unica.
+import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { dirname, join, relative, resolve, sep } from 'node:path';
+import { dirname, join, relative, resolve, sep, extname } from 'node:path';
 
-const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
+import {
+  WORDS_EN, WORDS_ES, PHRASES_EN, PHRASES_ES,
+  OPENERS, STAGED, RESIDUE, LIMIT, CONTRAST_EN, CONTRAST_ES, CAPS_ALLOW,
+} from './vocab.mjs';
+
 const INSTRUCTIONS = new Set(['SKILL.md', 'README.md']);
-
-const BANNED_WORDS = [
-  'delve', 'tapestry', 'testament', 'vibrant', 'pivotal', 'crucial', 'intricate',
-  'meticulous', 'bolster', 'garner', 'underscore', 'interplay', 'multifaceted',
-  'nuanced', 'foster', 'leverage', 'utilize', 'commence', 'facilitate', 'encompass',
-  'paramount', 'groundbreaking', 'cutting-edge', 'game-changer', 'game-changing',
-  'transformative', 'seamless', 'robust', 'comprehensive', 'endeavor', 'endeavour',
-  'revolutionize', 'revolutionise', 'disruptive', 'holistic', 'synergy',
-  'excited', 'thrilled', 'delighted', 'proud to announce', 'milestone',
-  'thank you to our amazing', 'amazing community', 'peace of mind',
-  'aforementioned', 'harnessing', 'spearheading', 'showcasing', 'highlighting',
-  'emphasizing', 'enhancing', 'unprecedented', 'remarkable', 'stunning', 'profound',
-  'thought leader', 'value proposition', 'moving forward', 'circle back',
-  'rest assured', 'goes without saying',
-  'aprovechando', 'potenciando', 'revolucionario', 'sin precedentes',
-  'en el mundo actual', 'en el mundo de hoy', 'en resumen', 'en conclusión',
-  'vale la pena destacar', 'es importante destacar', 'sin duda alguna',
-];
-
-const BANNED_PHRASES = [
-  'in today\'s', "let's dive", 'at its core', 'in the realm of', "here's the thing",
-  "here's the deal", 'without further ado', 'in a nutshell', 'buckle up',
-  'the bottom line is', 'at the end of the day', 'it\'s worth noting',
-  'it\'s important to note', 'i hope this helps', "i hope this finds you well",
-  "i hope this email finds you well", 'as per my last email',
-  "please don't hesitate", 'let me know if', 'move the needle', 'bridge the gap',
-  'unlock the power', 'take it to the next level', 'streamline your',
-  'supercharge your', 'when it comes to', 'this is where', 'in conclusion',
-];
-
-const BANNED_OPENERS = /^\s*(certainly|sure|of course|absolutely|great question|great point|i'd be happy to|honestly\?|honestly|look|real talk|here's the thing)\b/i;
-
-const STAGED = /^\s*(overall|in conclusion|firstly|secondly|thirdly|additionally|moreover|furthermore|notably|importantly|interestingly|indeed)\b[,:]/i;
-
-const RESIDUE = /\b(i hope this helps|let me know if you (want|need|have)|hope this helps)\b/i;
-
-const LIMIT = /\b(as of (my last|my knowledge)|up to my last training|to my (best )?knowledge|based on available information|is not publicly available)\b/i;
-
-const CONTRAST_EN = /\b(?:not|doesn'?t|isn'?t|aren'?t) (just|only|merely)\b|\bit'?s not [^.]{0,60}, it'?s\b|\bnot only\b[^.]{0,80}\bbut\b/i;
-const CONTRAST_ES = /\bno es (solo|sólo)\b[^.]{0,80}\bsino\b|\bnada m[áa]s:\s|\bs[óo]lo (eso|esto):/i;
-
-const BANNER = /^\s*(?:\/\/|#|\*|\/\*)\s*(?:=+|-{3,}|STEP\s*\d|\*{2,}\s*\w+\s*\*{2,})/;
-
-const EMOJI_BULLET = /^\s*[-*]\s*[\u{1F300}-\u{1FAFF}\u{2190}-\u{27BF}\u{FE0F}]/u;
-const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2700}-\u{27BF}\u{FE0F}\u{1F000}-\u{1F2FF}]/u;
-
-const BOLD_LABEL = /^\s*[-*]\s+\*\*[^*]{1,40}:?\*\*/;
-
-const AI_ATTRIBUTION = /co-authored-by:.*(claude|gpt|copilot|gemini|openai|anthropic|chatgpt)|\bgenerated with (claude|ai|copilot|chatgpt)\b/i;
-
-const UNVERIFIED_TESTS = /\b(all )?tests? (pass|passed|passes|are green|green)\b/i;
-
-const CODE_EXT = /\.(js|mjs|ts|tsx|jsx|c|cc|cpp|h|hpp|java|go|rs|py|sh|ps1|json|ya?ml)$/i;
-
-const CAPS_ALLOW = new Set([
-  'API', 'APIS', 'URL', 'URLS', 'CSS', 'JSON', 'HTTP', 'HTTPS', 'HTML', 'XML', 'DNS',
-  'TLS', 'SSL', 'MV2', 'MV3', 'PNG', 'JPG', 'SVG', 'GIF', 'GPL', 'MIT', 'AI', 'UI',
-  'UX', 'ID', 'PR', 'CI', 'CD', 'CLI', 'TUI', 'SDK', 'QA', 'CPU', 'GPU', 'RAM', 'OS',
-  'DNR', 'DNT', 'SSR', 'CSRF', 'KV', 'SQL', 'CSV', 'RSS', 'IPC', 'TTY',
-  'README', 'ADR', 'CHANGELOG', 'LICENSE', 'JSONL', 'TOML', 'YAML', 'MD',
-  'TODO', 'FIXME', 'NOTE', 'WIP', 'A', 'I', 'X', 'AN', 'AS', 'IF', 'TO', 'ON',
+const TEXT_EXT = new Set(['.md', '.mdx', '.markdown', '.txt', '.rst']);
+const SKIP_DIRS = new Set([
+  'node_modules', '.git', '.svn', 'dist', 'build', 'out', 'vendor',
+  'coverage', '.next', '.venv', '__pycache__', '.cache', 'target',
 ]);
 
-const CHECKS = [
-  ['dash', /(^|[\s(])[—–](?=[\s).,;:]|$)/, 'guion largo: usar coma, punto o parentesis'],
-  ['dash', / -- /, '" -- " comoraya: usar coma o punto'],
-  ['opener', BANNED_OPENERS, 'abertura de chatbot'],
-  ['staged', STAGED, 'corrida de entrada'],
-  ['residue', RESIDUE, 'resto de conversacion'],
-  ['limit', LIMIT, 'admision de limite de conocimiento'],
-  ['contrast', CONTRAST_EN, 'contraste not X but Y'],
-  ['contrast', CONTRAST_ES, 'contraste no X sino Y'],
-  ['banner', BANNER, 'banners de seccion en codigo'],
-  ['emoji', EMOJI_BULLET, 'bullet con emoji'],
-  ['emoji', EMOJI, 'emoji en el texto'],
-  ['bold', BOLD_LABEL, 'lista con label en negrita'],
-  ['attribution', AI_ATTRIBUTION, 'trailer de coautoria de IA'],
-  ['tests', UNVERIFIED_TESTS, 'dice que los tests pasan sin nombrar el comando'],
+const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// "highlighting" y "showcasing" cuelgan de una raiz, asi que el sufijo se
+// acepta en la raiz y no solo en la forma completa.
+const WORD_PATTERNS = [...WORDS_EN, ...WORDS_ES].map((word) => ({
+  word,
+  regex: new RegExp(`(?<![\\p{L}])${escapeRegex(word)}(?:s|es|d|ed|ing|ly)?(?![\\p{L}])`, 'iu'),
+}));
+
+const PHRASE_LIST = [...PHRASES_EN, ...PHRASES_ES].map((p) => p.toLowerCase());
+
+const OPENER = new RegExp(
+  `^\\s*(?:${OPENERS.map(escapeRegex).join('|')})(?=\\s|$|[.,;:!?])`,
+  'i',
+);
+const STAGED_RE = new RegExp(`^\\s*(?:${STAGED.map(escapeRegex).join('|')})\\b[,:]`, 'i');
+const RESIDUE_RE = new RegExp(`\\b(?:${RESIDUE.join('|')})\\b`, 'i');
+const LIMIT_RE = new RegExp(`\\b(?:${LIMIT.join('|')})\\b`, 'i');
+
+const BANNER = /^\s*(?:\/\/|#|\*|\/\*)\s*(?:=+|-{3,}|STEP\s*\d|\*{2,}\s*\w+\s*\*{2,})/;
+const EMOJI_BULLET = /^\s*[-*]\s*[\u{1F300}-\u{1FAFF}\u{2190}-\u{27BF}\u{FE0F}]/u;
+const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2700}-\u{27BF}\u{FE0F}\u{1F000}-\u{1F2FF}\u{2B00}-\u{2BFF}]/u;
+const BOLD_LABEL = /^\s*[-*]\s+\*\*[^*]{1,40}:?\*\*/;
+const AI_ATTRIBUTION =
+  /co-authored-by:.*(claude|gpt|copilot|gemini|openai|anthropic|chatgpt)|\bgenerated with (claude|ai|copilot|chatgpt)\b/i;
+const UNVERIFIED_TESTS = /\b(all )?tests? (pass|passed|passes|are green|green)\b/i;
+
+// Un comando nombrado cerca de la afirmacion es lo que separa "los tests
+// pasan" de la mentira. Sin esto el checker marcaba frases legitimas.
+const COMMAND = new RegExp(
+  [
+    '(?:^|\\s)(?:npm|pnpm|yarn|bun)\\s+(?:run\\s+)?(?:test|check|lint|build)\\b',
+    '(?:^|\\s)node\\s+[\\w\\-.]+\\.[a-z]{1,4}\\b',
+    '(?:^|\\s)node\\s+[\\w\\-]*[\\\\/][\\w\\-./\\\\]+\\b',
+    '(?:^|\\s)python3?\\s+[\\w\\-.]+\\.(?:py|sh)\\b',
+    '(?:^|\\s)(?:pytest|tox|cargo\\s+test|go\\s+test|mvn\\s+test|gradlew?\\s+test|make\\s+test|dotnet\\s+test|rspec|phpunit)\\b',
+    '(?:^|\\s)(?:jest|vitest|mocha|ava|tap)\\b',
+    '^\\s*\\$\\s+\\S',
+  ].join('|'),
+  'im',
+);
+
+const RULES = [
+  { id: 'dash', pattern: /(^|[\s(])[—–](?=[\s).,;:]|$)/, message: 'guion largo: usar coma, punto o parentesis' },
+  { id: 'dash', pattern: / -- /, message: '" -- " comoraya: usar coma o punto' },
+  { id: 'opener', pattern: OPENER, message: 'abertura de chatbot' },
+  { id: 'staged', pattern: STAGED_RE, message: 'corrida de entrada' },
+  { id: 'residue', pattern: RESIDUE_RE, message: 'resto de conversacion' },
+  { id: 'limit', pattern: LIMIT_RE, message: 'admision de limite de conocimiento' },
+  { id: 'contrast', pattern: CONTRAST_EN, message: 'contraste not X but Y' },
+  { id: 'contrast', pattern: CONTRAST_ES, message: 'contraste no X sino Y' },
+  { id: 'banner', pattern: BANNER, message: 'banners de seccion en codigo' },
+  { id: 'emoji', pattern: EMOJI_BULLET, message: 'bullet con emoji' },
+  { id: 'emoji', pattern: EMOJI, message: 'emoji en el texto' },
+  { id: 'bold', pattern: BOLD_LABEL, message: 'lista con label en negrita' },
+  { id: 'attribution', pattern: AI_ATTRIBUTION, message: 'trailer de coautoria de IA' },
+  { id: 'tests', pattern: UNVERIFIED_TESTS, message: 'dice que los tests pasan sin nombrar el comando' },
 ];
 
-// Reglas que salen de la lista de palabras: no aplican a los archivos de
-// instrucciones de una skill, porque esos las nombran para explicarlas.
+// --- Commits ------------------------------------------------------------
+// Las reglas de `references/git.md` que si se pueden mirar. El resto sigue
+// siendo del juicio humano.
+
+const COMMIT_PREFIXES = [
+  'feat', 'fix', 'chore', 'docs', 'style', 'refactor', 'perf', 'test',
+  'build', 'ci', 'revert',
+];
+
+const VAGUE_SUBJECT = [
+  'update', 'updates', 'updated', 'update code', 'update files', 'updated files',
+  'fix', 'fixes', 'fixed', 'fix bug', 'fix a bug', 'fixed a bug', 'bug fix',
+  'bugfix', 'change', 'changes', 'changed files', 'minor changes',
+  'misc', 'misc changes', 'wip', 'cleanup', 'clean up', 'tweaks',
+  'improvements', 'initial commit', 'first commit', 'bump version',
+];
+
+const FILE_BULLET = /^\s*[-*]\s+`?[\w.\-/]+\.(?:ts|tsx|js|mjs|jsx|py|go|rs|java|kt|md|json|ya?ml|sh|toml|css|html)\b/i;
+const ISSUE_CLAIM = /\b(?:this\s+)?(?:also\s+)?(?:fixes|closes|resolves)\s+#(\d+)/i;
+
+// Reglas que nacen de una palabra de la lista: un fichero de reglas las nombra
+// para explicarlas y no deberia marcarse a si mismo.
 const FROM_VOCABULARY = new Set([
   'opener', 'staged', 'residue', 'limit', 'contrast', 'tests', 'attribution',
 ]);
+
+const CODE_EXT = /\.(js|mjs|ts|tsx|jsx|c|cc|cpp|h|hpp|java|go|rs|py|sh|ps1|json|ya?ml)$/i;
 
 function skillRootOf(abs) {
   let dir = dirname(abs);
@@ -101,13 +116,17 @@ function skillRootOf(abs) {
 }
 
 function vocabularyApplies(name, strict) {
-  if (strict) return true;
-
   const abs = resolve(name);
   const root = skillRootOf(abs);
+  const rel = root ? relative(root, abs).split(/[\\/]/).join(sep) : '';
+
+  // La lista de palabras es la unica excepcion de `--strict`: nombra cada
+  // palabra baneada porque es su trabajo.
+  if (rel === `references${sep}banned.md`) return false;
+
+  if (strict) return true;
   if (!root) return true;
 
-  const rel = relative(root, abs).split(/[\\/]/).join(sep);
   return !(
     INSTRUCTIONS.has(rel) ||
     rel.startsWith(`references${sep}`) ||
@@ -128,6 +147,7 @@ function strip(lines) {
       .replace(/`[^`]*`/g, (m) => ' '.repeat(m.length))
       .replace(/https?:\/\/\S+/g, (m) => ' '.repeat(m.length))
       .replace(/!?\[[^\]]*\]\([^)]*\)/g, (m) => ' '.repeat(m.length))
+      .replace(/<!--[\s\S]*?-->/g, (m) => ' '.repeat(m.length))
       .replace(/^\s*>.*$/, (m) => ' '.repeat(m.length));
   });
 }
@@ -164,34 +184,37 @@ function uniformRuns(lines) {
   return out;
 }
 
-const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-function checkFile(name, text, strict) {
+export function checkFile(name, text, strict = false, options = {}) {
+  const allowCaps = new Set([...CAPS_ALLOW, ...(options.allowCaps ?? [])]);
   const raw = text.split('\n');
   const lines = strip(raw);
   const isCode = CODE_EXT.test(name);
   const vocabulary = vocabularyApplies(name, strict);
+  const namesCommand = COMMAND.test(text);
   const found = [];
 
   raw.forEach((line, i) => {
     const plain = lines[i];
 
-    for (const [rule, pattern, message] of CHECKS) {
-      if (isCode && !['banner', 'emoji'].includes(rule)) continue;
-      if (FROM_VOCABULARY.has(rule) && !vocabulary) continue;
-      if (pattern.test(plain)) found.push({ n: i + 1, rule, message, line: line.trim() });
+    for (const rule of RULES) {
+      if (isCode && !['banner', 'emoji'].includes(rule.id)) continue;
+      if (FROM_VOCABULARY.has(rule.id) && !vocabulary) continue;
+      // "los tests pasan" solo es mentira cuando el fichero no nombra el
+      // comando. Con el comando nombrado, la afirmacion se sostiene.
+      if (rule.id === 'tests' && namesCommand) continue;
+      if (rule.pattern.test(plain)) found.push({ n: i + 1, rule: rule.id, message: rule.message, line: line.trim() });
     }
 
     if (!vocabulary) return;
 
-    for (const word of BANNED_WORDS) {
-      if (new RegExp(`(?<![\\p{L}])${escape(word)}(?:s|es|d|ed|ing)?(?![\\p{L}])`, 'iu').test(plain)) {
+    for (const { word, regex } of WORD_PATTERNS) {
+      if (regex.test(plain)) {
         found.push({ n: i + 1, rule: 'banned-word', message: word, line: line.trim() });
       }
     }
 
     const lower = plain.toLowerCase();
-    for (const phrase of BANNED_PHRASES) {
+    for (const phrase of PHRASE_LIST) {
       if (lower.includes(phrase)) {
         found.push({ n: i + 1, rule: 'banned-phrase', message: phrase, line: line.trim() });
       }
@@ -199,7 +222,7 @@ function checkFile(name, text, strict) {
 
     if (!isCode) {
       for (const word of plain.match(/\b[A-Z]{3,}\b/g) ?? []) {
-        if (!CAPS_ALLOW.has(word)) {
+        if (!allowCaps.has(word)) {
           found.push({ n: i + 1, rule: 'caps', message: `mayusculas sin contexto: ${word}`, line: line.trim() });
         }
       }
@@ -216,31 +239,244 @@ function checkFile(name, text, strict) {
   return found;
 }
 
-export { checkFile, BANNED_WORDS };
+// --- Commits -------------------------------------------------------------
+
+export function checkCommit(name, text, options = {}) {
+  const prefixes = options.commitPrefixes ?? COMMIT_PREFIXES;
+  const lines = text.split('\n');
+  const subject = (lines[0] ?? '').trim();
+  const found = [];
+  const add = (rule, message, n = 1) => found.push({ n, rule, message, line: lines[n - 1]?.trim() ?? '' });
+
+  if (!subject) {
+    add('commit-subject-empty', 'el mensaje no tiene asunto');
+    return found;
+  }
+
+  if (subject.length > 72) {
+    add('commit-subject-length', `el asunto son ${subject.length} caracteres, el tope son 72`);
+  }
+
+  if (/[.]$/.test(subject)) {
+    add('commit-subject-period', 'el asunto no acaba en punto');
+  }
+
+  const prefix = subject.match(/^([a-z]+)(?:\([^)]*\))?!?:\s*/i);
+  const hasPrefix = prefix && prefixes.includes(prefix[1].toLowerCase());
+
+  if (/^[A-Z]/.test(subject) && !hasPrefix) {
+    add('commit-subject-case', 'el asunto empieza en mayuscula');
+  }
+
+  if (VAGUE_SUBJECT.includes(subject.toLowerCase().replace(/\.$/, ''))) {
+    add('commit-subject-vague', `el asunto "${subject}" no dice que cambio`);
+  }
+
+  if (/\band\b/i.test(subject)) {
+    add('commit-subject-and', 'el asunto necesita la palabra "and": son dos cambios');
+  }
+
+  lines.forEach((line, i) => {
+    if (i === 0) return;
+    if (FILE_BULLET.test(line)) {
+      add('commit-file-list', 'el cuerpo lista ficheros, que es lo que el diff ya enseña', i + 1);
+    }
+  });
+
+  const breaking = lines.findIndex((line) => /no breaking changes/i.test(line));
+  if (breaking > 0) {
+    add('commit-no-breaking', '"no breaking changes" cuando nada se rompe no dice nada', breaking + 1);
+  }
+
+  const claimLine = lines.findIndex((line) => ISSUE_CLAIM.test(line));
+  const claim = claimLine > 0 ? lines[claimLine].match(ISSUE_CLAIM) : null;
+  if (claim && !subject.includes(`#${claim[1]}`)) {
+    add('commit-issue', `el cuerpo cierra #${claim[1]} pero el asunto no lo nombra`, claimLine + 1);
+  }
+
+  // Las reglas de prosa tambien aplican al mensaje, y aqui el vocabulario
+  // siempre cuenta: un mensaje de commit nunca es un fichero de reglas. La
+  // extension se quita para que un mensaje guardado en un .js siga siendo
+  // texto y no codigo.
+  const proseName = name.replace(/\.[a-z0-9]{1,5}$/i, '') || 'commit';
+  for (const f of checkFile(proseName, text, true, options)) {
+    found.push(f);
+  }
+
+  return found;
+}
+
+// --- Configuracion del proyecto que se revisa ---------------------------
+// `slop.config.json` en el directorio de trabajo:
+//
+//   { "allowCaps": ["K8S"], "ignore": ["docs/generated/**"] }
+
+function globToRegExp(pattern) {
+  const escaped = pattern
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*\*\//g, '\u0000')
+    .replace(/\*\*/g, '\u0001')
+    .replace(/\*/g, '[^/]*')
+    .replace(/\?/g, '.');
+  return new RegExp(`^${escaped.replace(/\u0000/g, '(?:.*/)?').replace(/\u0001/g, '.*')}$`);
+}
+
+export function loadConfig(cwd = process.cwd()) {
+  const file = join(cwd, 'slop.config.json');
+  if (!existsSync(file)) return { allowCaps: [], ignore: [], commitPrefixes: COMMIT_PREFIXES };
+
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync(file, 'utf8'));
+  } catch (err) {
+    throw new Error(`slop.config.json no es JSON valido: ${err.message}`);
+  }
+  return {
+    allowCaps: parsed.allowCaps ?? [],
+    ignore: parsed.ignore ?? [],
+    commitPrefixes: parsed.commitPrefixes ?? COMMIT_PREFIXES,
+  };
+}
+
+function isIgnored(abs, cwd, patterns) {
+  if (!patterns.length) return false;
+  const rel = relative(cwd, abs).split(/[\\/]/).join('/');
+  return patterns.some((p) => globToRegExp(p).test(rel));
+}
+
+// --- Recorrido ----------------------------------------------------------
+
+export function collectFiles(target) {
+  const st = statSync(target);
+  if (st.isFile()) return [target];
+
+  const out = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name.startsWith('.')) continue;
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (SKIP_DIRS.has(entry.name)) continue;
+        walk(full);
+      } else if (entry.isFile() && TEXT_EXT.has(extname(entry.name).toLowerCase())) {
+        out.push(full);
+      }
+    }
+  };
+  walk(target);
+  return out.sort();
+}
+
+// --- CLI ----------------------------------------------------------------
+
+const USAGE = `usage: slop.mjs [options] <file|dir...>
+
+  --stdin        lee el texto de la entrada estandar
+  --strict       aplica el vocabulario tambien a los ficheros de reglas
+  --commit       el fichero es un mensaje de commit
+  --json         salida en JSON para CI
+  --quiet        solo imprime el resumen
+  --list-rules   lista las reglas y sale
+`;
 
 function main(argv) {
-  const strict = argv.includes('--strict');
-  const files = argv.filter((a) => a !== '--strict');
-  const targets =
-    files.length && files[0] !== '--stdin'
-      ? files.map((f) => [f, readFileSync(f, 'utf8')])
-      : [['stdin', readFileSync(0, 'utf8')]];
+  const opts = { strict: false, format: 'text', quiet: false, listRules: false, stdin: false, commit: false };
+  const targets = [];
 
+  for (const arg of argv) {
+    if (arg === '--strict') opts.strict = true;
+    else if (arg === '--commit') opts.commit = true;
+    else if (arg === '--json' || arg === '--format=json') opts.format = 'json';
+    else if (arg === '--quiet') opts.quiet = true;
+    else if (arg === '--list-rules') opts.listRules = true;
+    else if (arg === '--stdin') opts.stdin = true;
+    else if (arg.startsWith('--')) {
+      console.error(`opcion desconocida: ${arg}\n\n${USAGE}`);
+      return 2;
+    } else targets.push(arg);
+  }
+
+  if (opts.listRules) {
+    for (const rule of RULES) console.log(`${rule.id}\t${rule.message}`);
+    return 0;
+  }
+
+  if (!opts.stdin && targets.length === 0) {
+    console.error(USAGE);
+    return 2;
+  }
+
+  let config;
+  try {
+    config = loadConfig();
+  } catch (err) {
+    console.error(err.message);
+    return 2;
+  }
+
+  const cwd = process.cwd();
+  let files = [];
+  try {
+    if (opts.stdin) {
+      files = [['stdin', readFileSync(0, 'utf8')]];
+    } else {
+      for (const target of targets) {
+        if (!existsSync(target)) {
+          console.error(`no existe: ${target}`);
+          return 2;
+        }
+        for (const file of collectFiles(target)) {
+          if (isIgnored(resolve(file), cwd, config.ignore)) continue;
+          files.push([file, readFileSync(file, 'utf8')]);
+        }
+      }
+    }
+  } catch (err) {
+    console.error(`no se pudo leer: ${err.message}`);
+    return 2;
+  }
+
+  const report = [];
   let errors = 0;
-  for (const [name, text] of targets) {
-    const found = checkFile(name, text, strict);
-    if (!found.length) continue;
 
-    console.log(`${name}`);
-    for (const f of found) {
-      errors++;
+  for (const [name, text] of files) {
+    const found = opts.commit
+      ? checkCommit(name, text, config)
+      : checkFile(name, text, opts.strict, config);
+    if (!found.length) continue;
+    errors += found.length;
+    report.push({ file: name, findings: found });
+  }
+
+  if (opts.format === 'json') {
+    const payload = {
+      findings: errors,
+      files: report.map((entry) => ({
+        file: entry.file,
+        findings: entry.findings.map((f) => ({
+          line: f.n,
+          rule: f.rule,
+          message: f.message,
+          text: f.line,
+        })),
+      })),
+    };
+    console.log(JSON.stringify(payload, null, 2));
+    return errors ? 1 : 0;
+  }
+
+  for (const entry of report) {
+    console.log(entry.file);
+    for (const f of entry.findings) {
       const where = f.line ? `\n      ${f.line.slice(0, 100)}` : '';
       console.log(`  ${f.n}  ${f.rule}  ${f.message}${where}`);
     }
   }
 
-  console.log(errors ? `\n${errors} para arreglar` : 'limpio');
-  process.exit(errors ? 1 : 0);
+  if (!opts.quiet) console.log(errors ? `\n${errors} para arreglar` : 'limpio');
+  return errors ? 1 : 0;
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) main(process.argv.slice(2));
+export { checkFile as check, RULES, main };
+
+if (import.meta.url === pathToFileURL(process.argv[1]).href) process.exit(main(process.argv.slice(2)));
