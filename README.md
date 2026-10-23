@@ -15,7 +15,7 @@ been reviewed by hand when it had never been run.
 ## install
 
 ```
-npx skills add fxledev/unslopped -g
+npx skills add diquu/unslopped -g
 ```
 
 The `-g` matters. Without it the CLI picks the scope from your current
